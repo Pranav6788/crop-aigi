@@ -1,0 +1,15 @@
+numpy>=1.26
+pillow>=10.0
+opencv-python>=4.9
+pandas>=2.0
+scikit-learn>=1.4
+matplotlib>=3.8
+tqdm>=4.66
+torch==2.3.1
+torchvision==0.18.1
+transformers==4.44.2
+diffusers==0.30.3
+accelerate
+safetensors
+ftfy
+regex
