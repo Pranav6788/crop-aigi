@@ -4,13 +4,30 @@ __pycache__/
 .ipynb_checkpoints/
 .DS_Store
 
-data/raw/
+data/accept_test/
+data/base/
+data/ccmt_test*/
+data/control*/
 data/degraded/
-data/features/
-data/test_images/
+data/demo/
+data/demo_raw/
+data/features*/
+data/masks/
+data/raw/
+data/real_v2/
+data/spot_test*/
 data/test_compressed/
-data/sd_test/
+data/test_images/
+data/upload/
+
+# data/fake_v2/
+# data/accept_shuffled/
+# data/P2_a/
+# data/P2_b/
+
 weights/
 *.pth
 *.ckpt
 *.safetensors
+
+results/head_*.pkl

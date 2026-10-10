@@ -1,38 +1,3 @@
-"""
-Minimal Effort (ICML 2025) inference wrapper.
-
-Loads the released Effort checkpoint into a stock HuggingFace
-CLIPVisionModel, bypassing the DeepfakeBench framework entirely.
-
-Why this works
---------------
-The checkpoint stores CLIP ViT-L/14 attention projections in
-SVD-decomposed form:
-
-    weight_main   (1024, 1024)   frozen principal components
-    S_residual    (1,)           singular value  of the rank-1 update
-    U_residual    (1024, 1)      left  vector
-    V_residual    (1, 1024)      right vector
-
-At inference the decomposition is irrelevant - only the effective
-weight matters:
-
-    W_eff = weight_main + U_residual @ diag(S_residual) @ V_residual
-
-So we reconstruct W_eff once and load it as an ordinary Linear
-weight. No custom modules, no framework, no Python 3.7.
-
-Outputs both the 1024-d pooled feature (for few-shot head fitting)
-and the 2-class logits from the released head.
-
-Usage
------
-    from effort_wrapper import EffortDetector
-
-    det = EffortDetector("weights/effort_genimage.pth")
-    feats, logits = det.score_folder("data/degraded")
-"""
-
 from pathlib import Path
 
 import numpy as np
@@ -45,16 +10,10 @@ import cv2
 
 from device import get_device
 
-# ----------------------------------------------------------------------
-# Preprocessing constants - taken from
-# Effort-AIGI-Detection/DeepfakeBench/training/config/detector/effort.yaml
-# These are CLIP's normalisation values, NOT ImageNet's. Do not change.
-# ----------------------------------------------------------------------
 RESOLUTION = 224
 MEAN = (0.48145466, 0.4578275, 0.40821073)
 STD = (0.26862954, 0.26130258, 0.27577711)
 
-# CLIP ViT-L/14 vision tower. 257 position embeddings = (224/14)^2 + 1.
 VIT_L14 = dict(
     hidden_size=1024,
     intermediate_size=4096,
@@ -69,18 +28,6 @@ VIT_L14 = dict(
 
 
 def merge_svd(state):
-    """
-    Collapse SVD-decomposed projections into ordinary weight matrices.
-
-    Input keys look like:
-        module.backbone.encoder.layers.0.self_attn.k_proj.weight_main
-        module.backbone.encoder.layers.0.self_attn.k_proj.S_residual
-        module.backbone.encoder.layers.0.self_attn.k_proj.U_residual
-        module.backbone.encoder.layers.0.self_attn.k_proj.V_residual
-
-    Output:
-        vision_model.encoder.layers.0.self_attn.k_proj.weight
-    """
     # strip DataParallel prefix, split backbone from head
     backbone, head = {}, {}
     for k, v in state.items():
@@ -163,9 +110,6 @@ class EffortDetector:
     # ------------------------------------------------------------------
 
     def preprocess(self, img: Image.Image) -> torch.Tensor:
-        # Must match demo.py exactly: cv2.resize INTER_LINEAR, not PIL.
-        # PIL's BILINEAR anti-aliases on downscale; cv2's does not.
-        # For a forensic detector the difference is large.
         arr = np.asarray(img.convert("RGB"))
         arr = cv2.resize(arr, (RESOLUTION, RESOLUTION),
                         interpolation=cv2.INTER_LINEAR)
@@ -181,7 +125,6 @@ class EffortDetector:
         return feats.cpu().numpy(), logits.cpu().numpy()
 
     def score_folder(self, folder, batch_size=16, pattern="*"):
-        """Returns (filenames, features [N,1024], logits [N,2])."""
         files = sorted(p for p in Path(folder).glob(pattern)
                        if p.suffix.lower() in {".jpg", ".jpeg", ".png"})
         if not files:

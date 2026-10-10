@@ -34,7 +34,7 @@ import numpy as np
 
 TARGET_MIN = 0.15   # mask area band from the report
 TARGET_MAX = 0.35
-DISPLAY_MAX = 900   # window size cap
+DISPLAY_MAX = 1200   # window size cap
 
 
 class Painter:
